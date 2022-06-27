@@ -2,10 +2,10 @@
 	"schema_version": 1,
 	"quilt_loader": {
 		"group": "io.github.tropheusj",
-		"id": "modid",
-		"version": "${version}",
+		"id": "modid_test",
+		"version": "1.0.0",
 		"metadata": {
-			"name": "Modid",
+			"name": "Modid Test",
 			"description": "A short description of your mod.",
 			"contributors": {
 				"Tropheus Jay": "Owner"
@@ -14,26 +14,14 @@
 				"issues": "https://github.com/TropheusJ/quilt-template-mod/issues",
 				"sources": "https://github.com/TropheusJ/quilt-template-mod"
 			},
-			"icon": "assets/modid/icon.png"
+			"icon": "assets/modid_test/icon.png"
 		},
 		"intermediate_mappings": "net.fabricmc:intermediary",
 		"entrypoints": {
-			"init": "io.github.tropheusj.modid.ExampleMod"
-		},
-		"depends": [
-			{
-				"id": "quilt_loader",
-				"versions": ">=${loader_version}"
-			},
-			{
-				"id": "quilted_fabric_api",
-				"versions": ">=${qfapi_version}"
-			},
-			{
-				"id": "minecraft",
-				"versions": ">=${minecraft_version}"
-			}
-		]
-	},
-	"mixin": "modid.mixins.json"
+			"init": "io.github.tropheusj.modid_test.ExampleModTest",
+      "fabric-gametest": [
+        "io.github.tropheusj.modid_test.gametest.ExampleModGameTest"
+      ]
+		}
+	}
 }
