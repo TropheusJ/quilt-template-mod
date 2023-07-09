@@ -1,14 +1,14 @@
 plugins {
-	alias(libs.plugins.quilt.loom)
-	alias(libs.plugins.quilt.flower) // Quiltflower, a better decompiler
+	id "org.quiltmc.loom" version "1.1.+"
 	id "maven-publish"
 }
-archivesBaseName = project.archives_base_name
-group = project.maven_group
 
-ext.buildNumber = System.getenv("GITHUB_RUN_NUMBER")
-String patch = buildNumber != null ? buildNumber : "99999"
-version = project.version.replace("<build>", patch)
+archivesBaseName = archives_base_name
+group = maven_group
+
+String runNumber = System.getenv("GITHUB_RUN_NUMBER")
+String build = runNumber != null ? "build.$runNumber" : "local"
+version = "$mod_version-$build+mc$minecraft_version"
 
 repositories {
 	maven { url = "https://api.modrinth.com/maven" }
@@ -18,36 +18,42 @@ repositories {
 }
 
 dependencies {
-	// dev environment
-	minecraft(libs.minecraft)
+	// setup
+	minecraft("com.mojang:minecraft:$minecraft_version")
 	mappings loom.layered {
-		it.addLayer(quiltMappings.mappings("org.quiltmc:quilt-mappings:${libs.versions.minecraft.get()}+build.${libs.versions.qm.build.get()}:v2"))
-		it.officialMojangMappings { setNameSyntheticMembers(false) }
+		it.mappings("org.quiltmc:quilt-mappings:$minecraft_version+build.$qm_build:intermediary-v2")
+		it.officialMojangMappings { nameSyntheticMembers = false }
 	}
-	modImplementation(libs.bundles.dependencies)
-	modLocalRuntime(libs.bundles.dev.mods) { exclude group: "net.fabricmc"; exclude group: "net.fabricmc.fabric-api"; exclude group: "net.fabricmc.loader" }
+	modImplementation("org.quiltmc:quilt-loader:$loader_version")
+
+	// dependencies
+	modImplementation("org.quiltmc.quilted-fabric-api:quilted-fabric-api:$qfapi_version")
+
+	// dev env
+	modLocalRuntime("com.terraformersmc:modmenu:$mod_menu_version")
 }
 
-task buildOrPublish {
+tasks.register("buildOrPublish") {
 	group = "build"
-	String mavenUser = System.getenv().MAVEN_USER
+	String mavenUser = System.getenv("MAVEN_USER")
 	if (mavenUser != null && !mavenUser.isEmpty()) {
-		dependsOn(tasks.getByName("publish"))
+		dependsOn(tasks.named("publish"))
 		println("prepared for publish")
 	} else {
-		dependsOn(tasks.getByName("build"))
+		dependsOn(tasks.named("build"))
 		println("prepared for build")
 	}
 }
 
 processResources {
-	Map<String, String> properties = new HashMap<>()
-	properties.put("version", project.version)
-	properties.put("loader_version", libs.versions.quilt.loader.get())
-	properties.put("qfapi_version", libs.versions.quilted.fabric.api.get())
-	properties.put("minecraft_version", libs.versions.minecraft.get())
+	Map<String, Object> properties = [
+		"version": version,
+		"minecraft_version": minecraft_version,
+		"loader_version": loader_version,
+		"qfapi_version": qfapi_version
+	]
 
-	properties.forEach((k, v) -> inputs.property(k, v))
+	properties.forEach(inputs::property)
 
 	filesMatching("quilt.mod.json") {
 		expand properties
@@ -90,7 +96,7 @@ loom {
 
 tasks.withType(JavaCompile).configureEach {
 	it.options.encoding = "UTF-8"
-	it.options.release = 17
+	it.options.release.set(17)
 }
 
 java {
@@ -109,19 +115,23 @@ jar {
 
 publishing {
 	publications {
-		mavenJava(MavenPublication) {
-			from components.java
+		register("mavenJava", MavenPublication) {
+			artifactId = archivesBaseName + "_${project.name}"
+			//noinspection GroovyAssignabilityCheck
+			from(components.java)
 		}
 	}
 
 	repositories {
 		maven {
-			url = "https://mvn.devos.one/${System.getenv().PUBLISH_SUFFIX}/"
+			url = "https://mvn.devos.one/${System.getenv("PUBLISH_SUFFIX")}/"
 			credentials {
-				username = System.getenv().MAVEN_USER
-				password = System.getenv().MAVEN_PASS
+				username = System.getenv("MAVEN_USER")
+				password = System.getenv("MAVEN_PASS")
 			}
-			authentication { basic(BasicAuthentication) }
+			authentication {
+				create("basic", BasicAuthentication)
+			}
 		}
 	}
 }
